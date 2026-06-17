@@ -23,6 +23,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "BoardLed.h"
+#include "ZRTC.h"
+
 #include "usbd_cdc_if.h"
 
 /* USER CODE END Includes */
@@ -127,31 +129,13 @@ int main(void) {
 
 
 	while (1) {
-		x0 = HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR0);
-		x1 = HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR1);
-		x2 = HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR2);
-		x3 = HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR3);
-		x4 = HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR4);
 
 		ledBlink(20);
-		RTC_TimeTypeDef sTime = {0};
-		RTC_DateTypeDef sDate = {0};
-		char msg[50]; // Buffer to store the formatted text string
 
-		// 1. ALWAYS read time first! Use RTC_FORMAT_BIN to get standard decimal numbers
-		HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+		char bfr[50]; // Buffer to store the formatted text string
+		zRTC_GetTimeDate(bfr, sizeof(bfr));
 
-		// 2. ALWAYS read date second!
-		HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
-
-		// 3. Format into a human-readable string (YYYY-MM-DD HH:MM:SS)
-		// Adding 2000 to Year because sDate.Year only returns a two-digit offset (e.g., 26 for 2026)
-		sprintf(msg, "%02d:%02d:%02d | 20%02d-%02d-%02d \n",
-				sTime.Hours, sTime.Minutes, sTime.Seconds,
-				sDate.Year, sDate.Month, sDate.Date
-		);
-
-		CDC_Transmit_FS((uint8_t *) msg, strlen(msg));
+		CDC_Transmit_FS((uint8_t *) bfr, strlen(bfr));
 		HAL_Delay(5000);
 
 
