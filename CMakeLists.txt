@@ -16,8 +16,16 @@ add_compile_options("$<$<CONFIG:Debug>:-g3>")
 ###########
 ## OVO OVO
 ###########
-set(INCLUDE_Z "/home/mcu/dev_stm32/_IncZ")
-#set(INCLUDE_Z ${CMAKE_CURRENT_SOURCE_DIR}/../../_IncZ)
+set(MAYBE_INCLUDE
+        "/home/mcu/dev_stm32/_IncZ"
+        "D:/Dev_STM32/_IncWin"
+)
+set(INCLUDE_Z "")
+foreach(PATH IN LISTS MAYBE_INCLUDE)
+    if(EXISTS "${PATH}")
+        list(APPEND INCLUDE_Z "${PATH}")
+    endif()
+endforeach()
 
 
 # Setup compiler settings
