@@ -31,6 +31,25 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+#define MAX_RECORDS 3000
+#define MAX_BUFFER_KB 100
+typedef struct {
+	RTC_DateTypeDef date;		// rtc date and time
+	RTC_TimeTypeDef time;
+	uint16_t sens1;				// data from sensor 1, 2...
+	uint16_t sens2;
+	uint16_t sens3;
+} SingleLogRecord_t;
+typedef struct {
+	uint32_t nextpos;
+	SingleLogRecord_t data[MAX_RECORDS];
+} LogData_t;
+LogData_t LogData = {0};	// GLOBAL variable shows ram usage at compile time
+
+
+// --- COMPILE TIME SAFETY CHECK ---
+// Math: MAX_BUFFER_KB * 1024 converts Kilobytes directly to raw Bytes
+static_assert(sizeof(LogData_t) <= (MAX_BUFFER_KB * 1024), "CRITICAL ERROR: LogData_t structure exceeds the assigned Kilobyte RAM limit!");
 
 /* USER CODE END PTD */
 
@@ -121,22 +140,34 @@ int main(void) {
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
 
-	uint32_t x0;
-	uint32_t x1;
-	uint32_t x2;
-	uint32_t x3;
-	uint32_t x4;
-
+	// LogData_t LogData= {0};
+	int x = 0;
 
 	while (1) {
 
 		ledBlink(20);
 
+		if (LogData.nextpos >= MAX_RECORDS) {
+			// popunjeno!
+		} else {
+			RTC_TimeTypeDef sT = {0};
+			RTC_DateTypeDef sD = {0};
+			zRTC_GetTimeDate(&sT, &sD);
+			uint32_t idx = LogData.nextpos;
+			LogData.data[idx].time = sT;
+			LogData.data[idx].date = sD;
+			LogData.data[idx].sens1 = x++;
+			LogData.data[idx].sens2 = x++;
+			LogData.data[idx].sens3 = x++;
+			LogData.nextpos ++;
+			HAL_Delay(1000);
+		}
+
 		char bfr[50]; // Buffer to store the formatted text string
-		zRTC_GetTimeDate(bfr, sizeof(bfr));
+		zRTC_GetTimeDateString(bfr, sizeof(bfr));
 
 		CDC_Transmit_FS((uint8_t *) bfr, strlen(bfr));
-		HAL_Delay(5000);
+		HAL_Delay(1000);
 
 
 		/* USER CODE END WHILE */
