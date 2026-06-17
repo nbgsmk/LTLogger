@@ -34,9 +34,10 @@ void zRTC_GetTimeDateString(char *rezult_bfr, size_t rezult_bfr_size) {
 	HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
 	HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
 
-	snprintf(rezult_bfr, rezult_bfr_size,  "%02d:%02d:%02d | 20%02d-%02d-%02d \n",
-				sTime.Hours, sTime.Minutes, sTime.Seconds,
-				sDate.Year, sDate.Month, sDate.Date);
+	snprintf(rezult_bfr, rezult_bfr_size,  "20%02d-%02d-%02dT%02d:%02d:%02d \n",
+				sDate.Year, sDate.Month, sDate.Date,
+				sTime.Hours, sTime.Minutes, sTime.Seconds
+				);
 	__NOP();
 }
 

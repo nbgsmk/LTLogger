@@ -65,7 +65,7 @@ uint8_t DataLogger_GetRecordString(char *out_str, size_t out_str_len, uint32_t i
 	uint16_t sensor2 = LogData.data[idx].sens2;
 	uint16_t sensor3 = LogData.data[idx].sens3;
 
-	snprintf(out_str, out_str_len, "%02d/%02d/20%02d | %02d:%02d:%02d | S1: %u, S2: %u, S3: %u\r\n", d.Date, d.Month, d.Year, t.Hours, t.Minutes, t.Seconds, sensor1, sensor2, sensor3);
+	snprintf(out_str, out_str_len, "20%02d-%02d-%02dT%02d:%02d:%02d; s1= %u; s2= %u; s3= %u\r\n", d.Year, d.Month, d.Date, t.Hours, t.Minutes, t.Seconds, sensor1, sensor2, sensor3);
 
 	return 0;
 }
