@@ -57,6 +57,8 @@ enable_language(C ASM)
 add_executable(${CMAKE_PROJECT_NAME}
         Core/Src/ZRTC.c
         Core/Src/ZRTC.h
+        Core/Src/DataLogger.c
+        Core/Src/DataLogger.h
 )
 
 # Add STM32CubeMX generated sources
