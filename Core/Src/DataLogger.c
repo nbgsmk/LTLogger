@@ -2,7 +2,12 @@
 // Created by peca on 18-Jun-26.
 //
 
+#include <stdio.h>
+
 #include "DataLogger.h"
+
+#include <string.h>
+
 
 // --- Global Memory Allocation ---
 // Defining this variable globally allocates exactly ~60,008 bytes in RAM (.bss section)
@@ -46,3 +51,21 @@ uint8_t DataLogger_Append(RTC_TimeTypeDef *rtc_time, RTC_DateTypeDef *rtc_date, 
 	return 0; // no errors
 }
 
+
+
+uint8_t DataLogger_GetRecordString(char *out_str, size_t out_str_len, uint32_t idx) {
+	if (idx >= LogData.nextpos) {
+		return 1;
+	}
+
+	RTC_TimeTypeDef t = LogData.data[idx].time;
+	RTC_DateTypeDef d = LogData.data[idx].date;
+
+	uint16_t sensor1 = LogData.data[idx].sens1;
+	uint16_t sensor2 = LogData.data[idx].sens2;
+	uint16_t sensor3 = LogData.data[idx].sens3;
+
+	snprintf(out_str, out_str_len, "%02d/%02d/20%02d | %02d:%02d:%02d | S1: %u, S2: %u, S3: %u\r\n", d.Date, d.Month, d.Year, t.Hours, t.Minutes, t.Seconds, sensor1, sensor2, sensor3);
+
+	return 0;
+}

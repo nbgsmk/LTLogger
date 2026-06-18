@@ -40,6 +40,6 @@ extern LogData_t LogData;
 // --- Public Function Prototypes ---
 void DataLogger_Init(void);
 uint8_t DataLogger_Append(RTC_TimeTypeDef *rtc_time, RTC_DateTypeDef *rtc_date, uint16_t s1, uint16_t s2, uint16_t s3);
-
+uint8_t DataLogger_GetRecordString(char *out_str, size_t out_str_len, uint32_t idx);
 
 #endif //LTLOGGER_DATALOGGER_H

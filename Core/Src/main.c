@@ -77,6 +77,56 @@ static void MX_SPI1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+volatile bool flegZauzeto = false;
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+	GPIO_PinState prikit = HAL_GPIO_ReadPin(BOARD_KEY0_WKUP_GPIO_Port, BOARD_KEY0_WKUP_Pin);
+	if (prikit == GPIO_PIN_RESET) {
+		flegZauzeto = true;
+	}
+}
+
+void dampujAkoJePrikit() {
+	extern USBD_HandleTypeDef hUsbDeviceFS;
+	USBD_CDC_HandleTypeDef *hcdc = NULL;
+	if (hUsbDeviceFS.pClassData != NULL) {
+		hcdc = (USBD_CDC_HandleTypeDef*) hUsbDeviceFS.pClassData;
+	}
+	if (flegZauzeto == true) {
+		char buf[100];
+		for (int i = 0; i < LogData.nextpos; ++i) {
+			DataLogger_GetRecordString(buf, sizeof(buf), i);
+
+			uint32_t abortDelay = 2000;
+			uint8_t status = USBD_BUSY;
+			while (abortDelay > 0) {
+				status = CDC_Transmit_FS((uint8_t *) buf, strlen(buf));
+				if (USBD_BUSY == status) {
+					abortDelay--;
+					HAL_Delay(2);	// sacekaj da USBD bude spreman
+				} else {
+					HAL_Delay(5);	// throttle a little bit
+					break;
+				}
+			}
+
+			// CRITICAL SAFETY NET: If the request was successful, wait for the
+			// physical USB hardware to finish broadcasting the bytes over the wire
+			// BEFORE allowing the for-loop to run again and overwrite "buf".
+			if (status == USBD_OK && hcdc != NULL) {
+				uint32_t txSafetyTimeout = 2000;
+				while (hcdc->TxState != 0) {
+					HAL_Delay(1);			// wait for physical USB hardware to finish broadcasting
+					if (--txSafetyTimeout == 0) {
+						break;				// Stop waiting if the host computer froze or unplugged
+					}
+				}
+			}
+
+		}
+	flegZauzeto = false;
+	}
+}
 
 /* USER CODE END 0 */
 
@@ -138,14 +188,17 @@ int main(void) {
 			zRTC_GetTimeDate(&sT, &sD);
 
 			DataLogger_Append(&sT, &sD, 0, 1, 2);
-			HAL_Delay(1000);
+			HAL_Delay(5000);
 
 		}
 
-		char bfr[50]; // Buffer to store the formatted text string
-		zRTC_GetTimeDateString(bfr, sizeof(bfr));
-
-		CDC_Transmit_FS((uint8_t *) bfr, strlen(bfr));
+		if (flegZauzeto == true) {
+			dampujAkoJePrikit();
+		} else {
+			char bfr[50]; // Buffer to store the formatted text string
+			zRTC_GetTimeDateString(bfr, sizeof(bfr));
+			CDC_Transmit_FS((uint8_t *) bfr, strlen(bfr));
+		}
 
 
 		/* USER CODE END WHILE */
@@ -257,7 +310,7 @@ static void MX_RTC_Init(void) {
 	/* USER CODE BEGIN Check_RTC_BKUP */
 
 	uint16_t MAGIC_NUM = 0x1177;
-#define MAGIC_REG RTC_BKP_DR2
+	#define MAGIC_REG RTC_BKP_DR2
 	uint32_t prev = HAL_RTCEx_BKUPRead(&hrtc, MAGIC_REG); // ako nadjes magic number, RTC je vec konfigurisan
 	GPIO_PinState btn = HAL_GPIO_ReadPin(BOARD_KEY0_WKUP_GPIO_Port, BOARD_KEY0_WKUP_Pin); // ako je pritisnuto dugme
 
