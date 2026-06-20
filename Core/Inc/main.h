@@ -57,14 +57,21 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define UART_TRACE huart1
 #define BOARD_LED0_polarity 0
-#define BOARD_SPI_FLASH_8M hspi1
+#define BOARD_SPI_FLASH hspi1
 #define BOARD_SPI_FLASH_CSpolarity 0
+#define UART_TRACE huart1
 #define BOARD_Xtal 25000000
 #define BOARD_KEY0_polarity 0
 #define BOARD_MEM_flash 512
 #define BOARD_MEM_ram 128
+#define BOARD_SPI_FLASH_size 8MBx8
+#define BOARD_SPI_FLASH_pages 32768
+#define BOARD_SPI_FLASH_pagesize 256
+#define BOARD_SPI_FLASH_erasePageCntFor4k 16
+#define BOARD_SPI_FLASH_erasePageCntFor32k 128
+#define BOARD_SPI_FLASH_erasePageCntFor64k 256
+#define BOARD_SPI_FLASH_eraseFull full_chip_erase
 #define BOARD_LED0_Pin GPIO_PIN_13
 #define BOARD_LED0_GPIO_Port GPIOC
 #define BOARD_KEY0_WKUP_Pin GPIO_PIN_0

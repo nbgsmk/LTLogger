@@ -59,6 +59,8 @@ add_executable(${CMAKE_PROJECT_NAME}
         Core/Src/ZRTC.h
         Core/Src/DataLogger.c
         Core/Src/DataLogger.h
+        Core/Src/W25Qxx.c
+        Core/Src/W25Qxx.h
 )
 
 # Add STM32CubeMX generated sources

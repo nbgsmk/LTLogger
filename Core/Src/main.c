@@ -90,7 +90,7 @@ void dampujAkoJePrikit() {
 	extern USBD_HandleTypeDef hUsbDeviceFS;
 	USBD_CDC_HandleTypeDef *hcdc = NULL;
 	if (hUsbDeviceFS.pClassData != NULL) {
-		hcdc = (USBD_CDC_HandleTypeDef*) hUsbDeviceFS.pClassData;
+		hcdc = (USBD_CDC_HandleTypeDef *) hUsbDeviceFS.pClassData;
 	}
 	if (flegZauzeto == true) {
 		char buf[100];
@@ -103,9 +103,9 @@ void dampujAkoJePrikit() {
 				status = CDC_Transmit_FS((uint8_t *) buf, strlen(buf));
 				if (USBD_BUSY == status) {
 					abortDelay--;
-					HAL_Delay(2);	// sacekaj da USBD bude spreman
+					HAL_Delay(2); // sacekaj da USBD bude spreman
 				} else {
-					HAL_Delay(5);	// throttle a little bit
+					HAL_Delay(5); // throttle a little bit
 					break;
 				}
 			}
@@ -116,15 +116,14 @@ void dampujAkoJePrikit() {
 			if (status == USBD_OK && hcdc != NULL) {
 				uint32_t txSafetyTimeout = 2000;
 				while (hcdc->TxState != 0) {
-					HAL_Delay(1);			// wait for physical USB hardware to finish broadcasting
+					HAL_Delay(1); // wait for physical USB hardware to finish broadcasting
 					if (--txSafetyTimeout == 0) {
-						break;				// Stop waiting if the host computer froze or unplugged
+						break; // Stop waiting if the host computer froze or unplugged
 					}
 				}
 			}
-
 		}
-	flegZauzeto = false;
+		flegZauzeto = false;
 	}
 }
 
@@ -177,7 +176,6 @@ int main(void) {
 	DataLogger_Init();
 
 	while (1) {
-
 		ledBlink(10);
 
 		if (LogData.nextpos >= MAX_RECORDS) {
@@ -189,7 +187,6 @@ int main(void) {
 
 			DataLogger_Append(&sT, &sD, 0, 1, 2);
 			HAL_Delay(5000);
-
 		}
 
 		if (flegZauzeto == true) {
@@ -310,7 +307,7 @@ static void MX_RTC_Init(void) {
 	/* USER CODE BEGIN Check_RTC_BKUP */
 
 	uint16_t MAGIC_NUM = 0x1177;
-	#define MAGIC_REG RTC_BKP_DR2
+#define MAGIC_REG RTC_BKP_DR2
 	uint32_t prev = HAL_RTCEx_BKUPRead(&hrtc, MAGIC_REG); // ako nadjes magic number, RTC je vec konfigurisan
 	GPIO_PinState btn = HAL_GPIO_ReadPin(BOARD_KEY0_WKUP_GPIO_Port, BOARD_KEY0_WKUP_Pin); // ako je pritisnuto dugme
 
@@ -326,17 +323,17 @@ static void MX_RTC_Init(void) {
 
 	/** Initialize RTC and set the Time and Date
 	*/
-	sTime.Hours = 0x00;
-	sTime.Minutes = 0x03;
-	sTime.Seconds = 0x00;
+	sTime.Hours = 0x23;
+	sTime.Minutes = 0x48;
+	sTime.Seconds = 0x5;
 	sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
 	sTime.StoreOperation = RTC_STOREOPERATION_RESET;
 	if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BCD) != HAL_OK) {
 		Error_Handler();
 	}
-	sDate.WeekDay = RTC_WEEKDAY_WEDNESDAY;
+	sDate.WeekDay = RTC_WEEKDAY_TUESDAY;
 	sDate.Month = RTC_MONTH_JUNE;
-	sDate.Date = 0x17;
+	sDate.Date = 0x16;
 	sDate.Year = 0x26;
 
 	if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BCD) != HAL_OK) {
@@ -372,7 +369,7 @@ static void MX_SPI1_Init(void) {
 	hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
 	hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
 	hspi1.Init.NSS = SPI_NSS_SOFT;
-	hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+	hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8;
 	hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
 	hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
 	hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -435,7 +432,7 @@ static void MX_GPIO_Init(void) {
 	HAL_GPIO_WritePin(BOARD_LED0_GPIO_Port, BOARD_LED0_Pin, GPIO_PIN_SET);
 
 	/*Configure GPIO pin Output Level */
-	HAL_GPIO_WritePin(BOARD_SPI_FLASH_CS_GPIO_Port, BOARD_SPI_FLASH_CS_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(BOARD_SPI_FLASH_CS_GPIO_Port, BOARD_SPI_FLASH_CS_Pin, GPIO_PIN_SET);
 
 	/*Configure GPIO pin : BOARD_LED0_Pin */
 	GPIO_InitStruct.Pin = BOARD_LED0_Pin;
@@ -454,7 +451,7 @@ static void MX_GPIO_Init(void) {
 	GPIO_InitStruct.Pin = BOARD_SPI_FLASH_CS_Pin;
 	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
 	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
 	HAL_GPIO_Init(BOARD_SPI_FLASH_CS_GPIO_Port, &GPIO_InitStruct);
 
 	/*Configure GPIO pin : BOARD_BOOT1_10k_pull_down_Pin */
