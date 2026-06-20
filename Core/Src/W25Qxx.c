@@ -111,14 +111,12 @@ void W25Q_Read(uint32_t startPage, uint8_t offset, uint32_t size, uint8_t *rData
 	uint8_t tData[5];
 	uint32_t memAddr = (startPage * 256) + offset;
 
-	if (numBLOCK < 512) // Chip Size<256Mb
-	{
+	if (numBLOCK < 512) {		// Chip Size<256Mb
 		tData[0] = W25Q_READ_DATA; // enable Read
 		tData[1] = (memAddr >> 16) & 0xFF; // MSB of the memory Address
 		tData[2] = (memAddr >> 8) & 0xFF;
 		tData[3] = (memAddr) & 0xFF; // LSB of the memory Address
-	} else // we use 32bit memory address for chips >= 256Mb
-	{
+	} else {				// we use 32bit memory address for chips >= 256Mb
 		tData[0] = W25Q_READ_DATA_4B; // Read Data with 4-Byte Address
 		tData[1] = (memAddr >> 24) & 0xFF; // MSB of the memory Address
 		tData[2] = (memAddr >> 16) & 0xFF;
@@ -141,15 +139,14 @@ void W25Q_FastRead(uint32_t startPage, uint8_t offset, uint32_t size, uint8_t *r
 	uint8_t tData[6];
 	uint32_t memAddr = (startPage * 256) + offset;
 
-	if (numBLOCK < 512) // Chip Size<256Mb
-	{
+	if (numBLOCK < 512) {	// Chip Size<256Mb
 		tData[0] = W25Q_FAST_READ; // enable Fast Read
 		tData[1] = (memAddr >> 16) & 0xFF; // MSB of the memory Address
 		tData[2] = (memAddr >> 8) & 0xFF;
 		tData[3] = (memAddr) & 0xFF; // LSB of the memory Address
 		tData[4] = 0; // Dummy clock
-	} else // we use 32bit memory address for chips >= 256Mb
-	{
+	} else {
+		// we use 32bit memory address for chips >= 256Mb
 		tData[0] = W25Q_FAST_READ_4B; // Fast Read with 4-Byte Address
 		tData[1] = (memAddr >> 24) & 0xFF; // MSB of the memory Address
 		tData[2] = (memAddr >> 16) & 0xFF;
@@ -176,9 +173,8 @@ void W25Q_Erase_Sector(uint16_t numsector) {
 
 	write_enable();
 
-	if (numBLOCK < 512) // Chip Size<256Mb
-	{
-		tData[0] = W25Q_SECTOR_ERASE; // Erase sector
+	if (numBLOCK < 512) {				// Chip Size<256Mb
+		tData[0] = W25Q_4KB_SECTOR_ERASE; // Erase sector
 		tData[1] = (memAddr >> 16) & 0xFF; // MSB of the memory Address
 		tData[2] = (memAddr >> 8) & 0xFF;
 		tData[3] = (memAddr) & 0xFF; // LSB of the memory Address
@@ -186,9 +182,8 @@ void W25Q_Erase_Sector(uint16_t numsector) {
 		csLOW();
 		SPI_Write(tData, 4);
 		csHIGH();
-	} else // we use 32bit memory address for chips >= 256Mb
-	{
-		tData[0] = W25Q_SECTOR_ERASE_4B; // ERASE Sector with 32bit address
+	} else {				// we use 32bit memory address for chips >= 256Mb
+		tData[0] = W25Q_4KB_SECTOR_ERASE; // ERASE Sector with 32bit address
 		tData[1] = (memAddr >> 24) & 0xFF;
 		tData[2] = (memAddr >> 16) & 0xFF;
 		tData[3] = (memAddr >> 8) & 0xFF;
@@ -228,16 +223,14 @@ void W25Q_Write_Clean(uint32_t page, uint16_t offset, uint32_t size, uint8_t *da
 
 		write_enable();
 
-		if (numBLOCK < 512) // Chip Size<256Mb
-		{
+		if (numBLOCK < 512) {					// Chip Size<256Mb
 			tData[0] = W25Q_PAGE_PROGRAM; // page program
 			tData[1] = (memAddr >> 16) & 0xFF; // MSB of the memory Address
 			tData[2] = (memAddr >> 8) & 0xFF;
 			tData[3] = (memAddr) & 0xFF; // LSB of the memory Address
 
 			indx = 4;
-		} else // we use 32bit memory address for chips >= 256Mb
-		{
+		} else {		 // we use 32bit memory address for chips >= 256Mb
 			tData[0] = W25Q_PAGE_PROGRAM_4B; // page program with 4-Byte Address
 			tData[1] = (memAddr >> 24) & 0xFF; // MSB of the memory Address
 			tData[2] = (memAddr >> 16) & 0xFF;
@@ -307,14 +300,12 @@ uint8_t W25Q_Read_Byte(uint32_t Addr) {
 	uint8_t tData[5];
 	uint8_t rData;
 
-	if (numBLOCK < 512) // Chip Size<256Mb
-	{
+	if (numBLOCK < 512) {		 // Chip Size<256Mb
 		tData[0] = W25Q_READ_DATA; // enable Read
 		tData[1] = (Addr >> 16) & 0xFF; // MSB of the memory Address
 		tData[2] = (Addr >> 8) & 0xFF;
 		tData[3] = (Addr) & 0xFF; // LSB of the memory Address
-	} else // we use 32bit memory address for chips >= 256Mb
-	{
+	} else {					 // we use 32bit memory address for chips >= 256Mb
 		tData[0] = W25Q_READ_DATA_4B; // Read Data with 4-Byte Address
 		tData[1] = (Addr >> 24) & 0xFF; // MSB of the memory Address
 		tData[2] = (Addr >> 16) & 0xFF;
@@ -339,16 +330,14 @@ void W25Q_Write_Byte(uint32_t Addr, uint8_t data) {
 	uint8_t tData[6];
 	uint8_t indx;
 
-	if (numBLOCK < 512) // Chip Size<256Mb
-	{
+	if (numBLOCK < 512) {				 // Chip Size<256Mb
 		tData[0] = W25Q_PAGE_PROGRAM; // page program
 		tData[1] = (Addr >> 16) & 0xFF; // MSB of the memory Address
 		tData[2] = (Addr >> 8) & 0xFF;
 		tData[3] = (Addr) & 0xFF; // LSB of the memory Address
 		tData[4] = data;
 		indx = 5;
-	} else // we use 32bit memory address for chips >= 256Mb
-	{
+	} else {	// we use 32bit memory address for chips >= 256Mb
 		tData[0] = W25Q_PAGE_PROGRAM_4B; // Write Data with 4-Byte Address
 		tData[1] = (Addr >> 24) & 0xFF; // MSB of the memory Address
 		tData[2] = (Addr >> 16) & 0xFF;
@@ -464,16 +453,14 @@ void flash_WriteMemory(uint8_t *buffer, uint32_t address, uint32_t buffer_size) 
 
 		write_enable();
 
-		if (numBLOCK < 512) // Chip Size<256Mb
-		{
+		if (numBLOCK < 512) {			 // Chip Size<256Mb
 			tData[0] = W25Q_PAGE_PROGRAM; // page program
 			tData[1] = (memAddr >> 16) & 0xFF; // MSB of the memory Address
 			tData[2] = (memAddr >> 8) & 0xFF;
 			tData[3] = (memAddr) & 0xFF; // LSB of the memory Address
 
 			indx = 4;
-		} else // we use 32bit memory address for chips >= 256Mb
-		{
+		} else {			// we use 32bit memory address for chips >= 256Mb
 			tData[0] = W25Q_PAGE_PROGRAM_4B; // page program with 4-Byte Address
 			tData[1] = (memAddr >> 24) & 0xFF; // MSB of the memory Address
 			tData[2] = (memAddr >> 16) & 0xFF;
