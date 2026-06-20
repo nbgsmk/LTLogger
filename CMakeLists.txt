@@ -16,8 +16,16 @@ add_compile_options("$<$<CONFIG:Debug>:-g3>")
 ###########
 ## OVO OVO
 ###########
-set(INCLUDE_Z "/home/mcu/dev_stm32/_IncZ")
-#set(INCLUDE_Z ${CMAKE_CURRENT_SOURCE_DIR}/../../_IncZ)
+set(MAYBE_INCLUDE
+        "/home/mcu/dev_stm32/_IncZ"
+        "D:/Dev_STM32/_IncWin"
+)
+set(INCLUDE_Z "")
+foreach(PATH IN LISTS MAYBE_INCLUDE)
+    if(EXISTS "${PATH}")
+        list(APPEND INCLUDE_Z "${PATH}")
+    endif()
+endforeach()
 
 
 # Setup compiler settings
@@ -47,6 +55,10 @@ enable_language(C ASM)
 
 # Create an executable object type
 add_executable(${CMAKE_PROJECT_NAME}
+        Core/Src/ZRTC.c
+        Core/Src/ZRTC.h
+        Core/Src/DataLogger.c
+        Core/Src/DataLogger.h
 )
 
 # Add STM32CubeMX generated sources
