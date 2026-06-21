@@ -262,8 +262,8 @@ void W25Q_Write_Clean(uint32_t page, uint16_t offset, uint32_t size, uint8_t *da
 
 		uint16_t bytestosend = bytesremaining + indx;
 
-		for (uint16_t i = 0; i < bytesremaining; i++) {
-			tData[indx++] = data[i + dataPosition];
+		for (uint16_t x = 0; x < bytesremaining; x++) {
+			tData[indx++] = data[x + dataPosition];
 		}
 
 		if (bytestosend > 250) {
@@ -302,8 +302,8 @@ void W25Q_Write(uint32_t page, uint16_t offset, uint32_t size, uint8_t *data) {
 		W25Q_FastRead(startPage, 0, 4096, previousData);
 
 		uint16_t bytesRemaining = bytestomodify(size, sectorOffset);
-		for (uint16_t i = 0; i < bytesRemaining; i++) {
-			previousData[i + sectorOffset] = data[i + dataindx];
+		for (uint16_t x = 0; x < bytesRemaining; x++) {
+			previousData[x + sectorOffset] = data[x + dataindx];
 		}
 
 		W25Q_Write_Clean(startPage, 0, 4096, previousData);
