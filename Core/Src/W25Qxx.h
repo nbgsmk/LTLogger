@@ -10,10 +10,10 @@
 
 #include "main.h"
 
-#define MEMORY_FLASH_SIZE				0x800000	/* 64Mbit => 8Mbyte */
-#define MEMORY_BLOCK_SIZE				0x10000		/* 1 block = 64KBytes */
-#define MEMORY_SECTOR_SIZE				0x1000		/* 1 sector = 4kBytes */
-#define MEMORY_PAGE_SIZE				0x100		/* 1 page = 256 bytes */
+#define W25Q_FLASH_SIZE					0x800000	/* 64Mbit => 8Mbyte */
+#define W25Q_ERASE_BLOCK_SIZE			0x10000		/* 1 block = 64KBytes */
+#define W25Q_ERASE_SECTOR_SIZE			0x1000		/* 1 sector = 4kBytes */
+#define W25Q_WRITE_PAGE_SIZE			256			/* 1 page = 256 bytes */
 
 #define W25Q_WRITE_ENABLE				0x06
 #define W25Q_VOLATILE_SR_WRITE_ENABLE	0x06
@@ -60,7 +60,6 @@
 
 
 void W25Q_Reset(void);
-
 void W25Q_Chip_Erase(void);
 
 uint32_t W25Q_ManufacturerDeviceID(void);
@@ -68,36 +67,27 @@ uint32_t W25Q_ReadID(void);
 uint32_t W25Q_UniqueID(void);
 
 void W25Q_Read(uint32_t startPage, uint8_t offset, uint32_t size, uint8_t *rData);
-
 void W25Q_FastRead(uint32_t startPage, uint8_t offset, uint32_t size, uint8_t *rData);
 
 void W25Q_Erase_Sector(uint16_t numsector);
 
+void W25Q_Write_AppendOnly(uint32_t page, uint16_t offset, uint32_t size, uint8_t *data);
 void W25Q_Write_Clean(uint32_t page, uint16_t offset, uint32_t size, uint8_t *data);
-
 void W25Q_Write(uint32_t page, uint16_t offset, uint32_t size, uint8_t *data);
-
 void W25Q_Write_Byte(uint32_t Addr, uint8_t data);
 
 uint8_t W25Q_Read_Byte(uint32_t Addr);
-
 float W25Q_Read_NUM(uint32_t page, uint16_t offset);
-
 void W25Q_Write_NUM(uint32_t page, uint16_t offset, float data);
 
 void W25Q_Read_32B(uint32_t page, uint16_t offset, uint32_t size, uint32_t *data);
-
 void W25Q_Write_32B(uint32_t page, uint16_t offset, uint32_t size, uint32_t *data);
 
-
 void flash_WriteMemory(uint8_t *buffer, uint32_t address, uint32_t buffer_size);
-
 void flash_ReadMemory(uint32_t Addr, uint32_t Size, uint8_t *buffer);
 
 void flash_SectorErase(uint32_t EraseStartAddress, uint32_t EraseEndAddress);
-
 void flash_ChipErase(void);
-
 void flash_Reset(void);
 
 

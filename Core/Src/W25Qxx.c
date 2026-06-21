@@ -219,6 +219,59 @@ void W25Q_Erase_Sector(uint16_t numsector) {
 	write_disable();
 }
 
+/*
+ * An append-only block writer. No erase, no read-modify-write for STM32F4
+ */
+void W25Q_Write_AppendOnly(uint32_t page, uint16_t offset, uint32_t size, uint8_t *data) {
+    uint8_t tData[266];
+    uint32_t startPage = page;
+    uint32_t endPage = startPage + ((size + offset - 1) / 256);
+    uint32_t numPages = endPage - startPage + 1;
+    uint32_t dataPosition = 0;
+
+    for (uint32_t i = 0; i < numPages; i++) {
+        uint32_t memAddr = (startPage * 256) + offset;
+        uint16_t bytesremaining = bytestowrite(size, offset); // Calculates remaining page space
+        uint32_t indx = 0;
+
+        write_enable(); // Enable the hardware latch
+
+        // Build the SPI command header
+        if (numBLOCK < 512) { // 24-bit addressing for chips < 256Mb (like your 8MB chip)
+            tData[0] = W25Q_PAGE_PROGRAM; // W25Q Page Program command
+            tData[1] = (memAddr >> 16) & 0xFF;
+            tData[2] = (memAddr >> 8) & 0xFF;
+            tData[3] = (memAddr) & 0xFF;
+            indx = 4;
+        } else { // 32-bit addressing for chips >= 256Mb
+            tData[0] = 0x12;
+            tData[1] = (memAddr >> 24) & 0xFF;
+            tData[2] = (memAddr >> 16) & 0xFF;
+            tData[3] = (memAddr >> 8) & 0xFF;
+            tData[4] = (memAddr) & 0xFF;
+            indx = 5;
+        }
+
+        uint16_t bytestosend = bytesremaining + indx;
+
+        for (uint16_t x = 0; x < bytesremaining; x++) {
+            tData[indx++] = data[x + dataPosition];
+        }
+
+        csLOW();
+    	SPI_Write(tData, bytestosend);
+        csHIGH();
+
+        // Increment pointer targets for the next page iteration
+        startPage++;
+        offset = 0;
+        size = size - bytesremaining;
+        dataPosition = dataPosition + bytesremaining;
+
+        W25Q_Waitforwrite(); // Wait for hardware to physically bake the bits
+        write_disable();
+    }
+}
 
 void W25Q_Write_Clean(uint32_t page, uint16_t offset, uint32_t size, uint8_t *data) {
 	uint8_t tData[266];
@@ -267,10 +320,19 @@ void W25Q_Write_Clean(uint32_t page, uint16_t offset, uint32_t size, uint8_t *da
 		}
 
 		if (bytestosend > 250) {
-			csLOW();
-			SPI_Write(tData, 100);
-			SPI_Write(tData + 100, bytestosend - 100);
-			csHIGH();
+			if (1==1) {
+				//  REPLACE IT WITH THIS CLEAN STM32 HAL CALL:
+				csLOW();
+				SPI_Write(tData, bytestosend);
+				csHIGH();
+			} else {
+				// navodno moze biti bug
+				csLOW();
+				SPI_Write(tData, 100);
+				SPI_Write(tData + 100, bytestosend - 100);
+				csHIGH();
+			}
+
 		} else {
 			csLOW();
 			SPI_Write(tData, bytestosend);

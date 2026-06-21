@@ -22,6 +22,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <ctype.h>
+
 #include "BoardLed.h"
 #include "ZRTC.h"
 #include "DataLogger.h"
@@ -95,7 +97,7 @@ void dampujAkoJePrikit() {
 	}
 	if (flegZauzeto == true) {
 		char buf[100];
-		for (int i = 0; i < LogData.nextpos; ++i) {
+		for (int i = 0; i < LogStatus.nextRamRecord; ++i) {
 			DataLogger_GetRecordString(buf, sizeof(buf), i);
 
 			uint32_t abortDelay = 2000;
@@ -172,7 +174,6 @@ int main(void) {
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
 
-	// LogData_t LogData= {0};
 	int x = 0;
 	DataLogger_Init();
 
@@ -181,25 +182,37 @@ int main(void) {
 	uint32_t jedid = W25Q_ReadID();
 	uint32_t uniq = W25Q_UniqueID();
 
+	uint32_t ramBlockCnt = 0;
+	constexpr uint32_t flashPagesPerRamBlock = ( (1024*MAX_RAM_BUFFER_KB) / W25Q_WRITE_PAGE_SIZE );
+	constexpr uint32_t ramBlocksPerW25Qflash = ( W25Q_FLASH_SIZE / (1024*MAX_RAM_BUFFER_KB) );
+
 	uint16_t fakeSensors[3] = {0};
 	uint16_t idxx = 0;
 	while (1) {
 		ledBlink(10);
 
-		if (LogData.nextpos >= MAX_RAM_RECORDS) {
+		RTC_TimeTypeDef sT = {0};
+		RTC_DateTypeDef sD = {0};
+		zRTC_GetTimeDate(&sT, &sD);
+
+		fakeSensors[0] = idxx++;
+		fakeSensors[1] = idxx++;
+		fakeSensors[2] = idxx++;
+		RamBuffer_Append(&sT, &sD, fakeSensors, sizeof(fakeSensors));
+
+		if (true == LogStatus.ramFull) {
 			// RAM bafer popunjen, prepisi ga u flash
-
-		} else {
-			RTC_TimeTypeDef sT = {0};
-			RTC_DateTypeDef sD = {0};
-			zRTC_GetTimeDate(&sT, &sD);
-
-			fakeSensors[0] = idxx++;
-			fakeSensors[1] = idxx++;
-			fakeSensors[2] = idxx++;
-			DataLogger_Append(&sT, &sD, fakeSensors, sizeof(fakeSensors));
-			HAL_Delay(2000);
+			uint32_t flashRawPage = ramBlockCnt * flashPagesPerRamBlock;
+			W25Q_Write_AppendOnly(flashRawPage, 0, sizeof(LogData),  (uint8_t*)&LogData);
+			ramBlockCnt++;
 		}
+
+		if (ramBlockCnt > ramBlocksPerW25Qflash) {
+			ramBlockCnt = 0;
+			DataLogger_Init();
+		}
+
+		HAL_Delay(2000);
 
 		if (flegZauzeto == true) {
 			dampujAkoJePrikit();

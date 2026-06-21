@@ -12,29 +12,28 @@
 // --- Global Memory Allocation ---
 // Defining this variable globally allocates exactly ~60,008 bytes in RAM (.bss section)
 LogData_t LogData = {0};
+LogStatus_t LogStatus = {0};
 
 /**
   * @brief  Initializes data logging tracking counters.
   * @retval None
   */
 void DataLogger_Init(void) {
-	LogData.nextpos = 0;
+	LogStatus.nextRamRecord = 0;
+	LogStatus.nextFlashRecord = 0;
+	LogStatus.ramFull = false;
 }
 
 
 /**
   * @brief  Writes a new snapshot record linearly to the non-circular log buffer.
-  * @param  sensorsArray: raw values from all sensors
-  * @param  sensorsArray_size: number of sensors connected
+  * @param  sensorArray: raw values from all sensors
+  * @param  sensorArray_size: number of sensors connected
   * @retval 1 if successful, 0 if the buffer is completely full (Data Rejected)
   */
-uint8_t DataLogger_Append(RTC_TimeTypeDef *rtc_time, RTC_DateTypeDef *rtc_date, const uint16_t sensorsArray[], size_t sensorsArray_size) {
-	if (LogData.nextpos > MAX_RAM_RECORDS) {
-		// popunjeno!
-		return 1; // Failure flag
-	}
+uint8_t RamBuffer_Append(RTC_TimeTypeDef *rtc_time, RTC_DateTypeDef *rtc_date, const uint16_t sensorArray[], size_t sensorArray_size) {
 
-	uint32_t idx = LogData.nextpos;
+	uint32_t idx = LogStatus.nextRamRecord;
 	LogData.data[idx].rtcHour = rtc_time->Hours;
 	LogData.data[idx].rtcMinute = rtc_time->Minutes;
 	LogData.data[idx].rtcSecond = rtc_time->Seconds;
@@ -44,13 +43,15 @@ uint8_t DataLogger_Append(RTC_TimeTypeDef *rtc_time, RTC_DateTypeDef *rtc_date, 
 	LogData.data[idx].rtcDate = rtc_date->Date;
 	LogData.data[idx].rtcWeekday = rtc_date->WeekDay;
 
-	for (int i = 0; i < sensorsArray_size; ++i) {
-		LogData.data[idx].sensors[i] = sensorsArray[i];
+	for (int i = 0; i < sensorArray_size; ++i) {
+		LogData.data[idx].sensors[i] = sensorArray[i];
 	}
-	LogData.nextpos ++;
-
-	if (LogData.nextpos == 6) {
-		__NOP();
+	LogStatus.nextRamRecord ++;
+	if (LogStatus.nextRamRecord > MAX_RAM_RECORDS) {
+		LogStatus.ramFull = true;
+		return 1; // Failure flag
+	} else {
+		LogStatus.ramFull = false;
 	}
 	return 0; // no errors
 }
@@ -58,7 +59,7 @@ uint8_t DataLogger_Append(RTC_TimeTypeDef *rtc_time, RTC_DateTypeDef *rtc_date, 
 
 
 uint8_t DataLogger_GetRecordString(char *out_str, size_t out_str_len, uint32_t idx) {
-	if (idx >= LogData.nextpos) {
+	if (idx >= LogStatus.nextRamRecord) {
 		return 1;
 	}
 	uint8_t hr = LogData.data[idx].rtcHour;
@@ -80,3 +81,5 @@ uint8_t DataLogger_GetRecordString(char *out_str, size_t out_str_len, uint32_t i
 
 	return 0;
 }
+
+

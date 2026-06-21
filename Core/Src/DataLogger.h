@@ -30,18 +30,22 @@ typedef struct {				// __attribute__((packed))
 static_assert(MAX_RAM_RECORDS * sizeof(SingleLogRecord_t) <= (MAX_RAM_BUFFER_KB * 1024), "CRITICAL: SingleLogRecord_t[MAX_RECORDS] will exceed the assigned Kilobyte RAM limit!");
 
 typedef struct {
-	uint32_t nextpos;
 	SingleLogRecord_t data[MAX_RAM_RECORDS];
-} LogData_t;		// Mora biti GLOBAL varijabla da bi se video ram usage at compile time
+} LogData_t;				// Mora biti GLOBAL varijabla u main.c da bi se video ram usage at compile time
 
+typedef struct {
+	uint32_t nextRamRecord;
+	bool ramFull;
+	uint32_t nextFlashRecord;
+} LogStatus_t;
 
-// Extern definition makes the instance visible across your entire project
-extern LogData_t LogData;
+extern LogData_t LogData;	// "extern" makes the instance visible across the entire project
+extern LogStatus_t LogStatus;
 
 
 // --- Public Function Prototypes ---
 void DataLogger_Init(void);
-uint8_t DataLogger_Append(RTC_TimeTypeDef *rtc_time, RTC_DateTypeDef *rtc_date, const uint16_t sensorsArray[], size_t sensorsArray_size);
+uint8_t RamBuffer_Append(RTC_TimeTypeDef *rtc_time, RTC_DateTypeDef *rtc_date, const uint16_t sensorArray[], size_t sensorArray_size);
 uint8_t DataLogger_GetRecordString(char *out_str, size_t out_str_len, uint32_t idx);
 
 #endif //LTLOGGER_DATALOGGER_H
