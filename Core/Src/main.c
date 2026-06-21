@@ -181,18 +181,24 @@ int main(void) {
 	uint32_t jedid = W25Q_ReadID();
 	uint32_t uniq = W25Q_UniqueID();
 
+	uint16_t fakeSensors[3] = {0};
+	uint16_t idxx = 0;
 	while (1) {
 		ledBlink(10);
 
-		if (LogData.nextpos >= MAX_RECORDS) {
-			// popunjeno!
+		if (LogData.nextpos >= MAX_RAM_RECORDS) {
+			// RAM bafer popunjen, prepisi ga u flash
+
 		} else {
 			RTC_TimeTypeDef sT = {0};
 			RTC_DateTypeDef sD = {0};
 			zRTC_GetTimeDate(&sT, &sD);
 
-			DataLogger_Append(&sT, &sD, 0, 1, 2);
-			HAL_Delay(5000);
+			fakeSensors[0] = idxx++;
+			fakeSensors[1] = idxx++;
+			fakeSensors[2] = idxx++;
+			DataLogger_Append(&sT, &sD, fakeSensors, sizeof(fakeSensors));
+			HAL_Delay(2000);
 		}
 
 		if (flegZauzeto == true) {
