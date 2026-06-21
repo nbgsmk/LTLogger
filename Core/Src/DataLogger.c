@@ -29,7 +29,7 @@ void DataLogger_Init(void) {
   * @retval 1 if successful, 0 if the buffer is completely full (Data Rejected)
   */
 uint8_t DataLogger_Append(RTC_TimeTypeDef *rtc_time, RTC_DateTypeDef *rtc_date, const uint16_t sensorsArray[], size_t sensorsArray_size) {
-	if (LogData.nextpos >= MAX_RAM_RECORDS) {
+	if (LogData.nextpos > MAX_RAM_RECORDS) {
 		// popunjeno!
 		return 1; // Failure flag
 	}
@@ -76,7 +76,7 @@ uint8_t DataLogger_GetRecordString(char *out_str, size_t out_str_len, uint32_t i
 	uint16_t s2 = LogData.data[idx].sensors[2];
 
 	// -55 to +125.0625 => max 8 characters
-	snprintf(out_str, out_str_len, "20%02d-%02d-%02dT%02d:%02d:%02d; (day %01d); sensors: %8u; %8u; %8u\r\n", yy, mon, dd, hr, min, sec, weekday, s0, s1, s2);
+	snprintf(out_str, out_str_len, "20%02d-%02d-%02dT%02d:%02d:%02d; (day %01d); sensors; %8u; %8u; %8u;\r\n", yy, mon, dd, hr, min, sec, weekday, s0, s1, s2);
 
 	return 0;
 }
