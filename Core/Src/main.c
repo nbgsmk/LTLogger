@@ -40,6 +40,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define RAMBLOCK_CNT_bkpreg    RTC_BKP_DR5
 
 /* USER CODE END PD */
 
@@ -80,12 +81,12 @@ static void MX_SPI1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-volatile bool flegZauzeto = false;
+volatile bool flegLogDumpInProgress = false;
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	GPIO_PinState prikit = HAL_GPIO_ReadPin(BOARD_KEY0_WKUP_GPIO_Port, BOARD_KEY0_WKUP_Pin);
 	if (prikit == GPIO_PIN_RESET) {
-		flegZauzeto = true;
+		flegLogDumpInProgress = true;
 	}
 }
 
@@ -95,8 +96,8 @@ void dampujAkoJePrikit() {
 	if (hUsbDeviceFS.pClassData != NULL) {
 		hcdc = (USBD_CDC_HandleTypeDef *) hUsbDeviceFS.pClassData;
 	}
-	if (flegZauzeto == true) {
-		char buf[100];
+	if (flegLogDumpInProgress == true) {
+		char buf[100] = {0};
 		for (int i = 0; i < LogStatus.nextRamRecord; ++i) {
 			DataLogger_GetRecordString(buf, sizeof(buf), i);
 
@@ -126,7 +127,7 @@ void dampujAkoJePrikit() {
 				}
 			}
 		}
-		flegZauzeto = false;
+		flegLogDumpInProgress = false;
 	}
 }
 
@@ -182,9 +183,13 @@ int main(void) {
 	uint32_t jedid = W25Q_ReadID();
 	uint32_t uniq = W25Q_UniqueID();
 
-	uint32_t ramBlockCnt = 0;
 	constexpr uint32_t flashPagesPerRamBlock = ( (1024*MAX_RAM_BUFFER_KB) / W25Q_WRITE_PAGE_SIZE );
 	constexpr uint32_t ramBlocksPerW25Qflash = ( W25Q_FLASH_SIZE / (1024*MAX_RAM_BUFFER_KB) );
+	uint32_t ramBlockCnt = 	zRTC_Get_BKPreg(RAMBLOCK_CNT_bkpreg);
+	if (ramBlockCnt >= ramBlocksPerW25Qflash) {
+		ramBlockCnt = 0;
+		zRTC_Set_BKPreg(RAMBLOCK_CNT_bkpreg, 0);
+	}
 
 	uint16_t fakeSensors[3] = {0};
 	uint16_t idxx = 0;
@@ -205,19 +210,42 @@ int main(void) {
 			uint32_t flashRawPage = ramBlockCnt * flashPagesPerRamBlock;
 			W25Q_Write_AppendOnly(flashRawPage, 0, sizeof(LogData),  (uint8_t*)&LogData);
 			ramBlockCnt++;
+			zRTC_Set_BKPreg(RAMBLOCK_CNT_bkpreg, ramBlockCnt);
+			LogStatus.ramFull = false;
+			LogStatus.nextRamRecord = 0;
 		}
 
-		if (ramBlockCnt > ramBlocksPerW25Qflash) {
+		if (ramBlockCnt >= ramBlocksPerW25Qflash) {
 			ramBlockCnt = 0;
+			zRTC_Set_BKPreg(RAMBLOCK_CNT_bkpreg, ramBlockCnt);
 			DataLogger_Init();
 		}
 
 		HAL_Delay(2000);
 
-		if (flegZauzeto == true) {
+		if (flegLogDumpInProgress == true) {
 			dampujAkoJePrikit();
+			// zatim cekaj ako treba flash erase
+			bool trigger_erase = false;
+			for ( ; ; ) {
+				ledBlink(20);		// rapid blink -> waiting for user input
+				HAL_Delay(20);
+				GPIO_PinState btnERASE_press = HAL_GPIO_ReadPin(BOARD_BOOT1_10k_pull_down_GPIO_Port, BOARD_BOOT1_10k_pull_down_Pin);
+				if (btnERASE_press == GPIO_PIN_SET) {
+					trigger_erase = true;
+					break;
+				}
+			}
+			if (trigger_erase == true) {
+				W25Q_Reset();
+				W25Q_Chip_Erase();
+				DataLogger_Init();
+				ramBlockCnt = 0;
+				zRTC_Set_BKPreg(RAMBLOCK_CNT_bkpreg, ramBlockCnt);
+				trigger_erase = false;
+			}
 		} else {
-			char bfr[50]; // Buffer to store the formatted text string
+			char bfr[100] = {0}; // Buffer to store the formatted text string
 			zRTC_GetTimeDateString(bfr, sizeof(bfr));
 			CDC_Transmit_FS((uint8_t *) bfr, strlen(bfr));
 		}
