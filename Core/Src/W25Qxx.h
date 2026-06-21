@@ -48,7 +48,7 @@
 #define W25Q_ERASE_PROGRAM_SUSPEND		0x75
 #define W25Q_ERASE_PROGRAM_RESUME		0x7A
 #define W25Q_POWERDOWN					0xB9
-#define W25Q_ENABLE_RST					0x66	//sequence is 0x66 + 0x99 + 30us delay
+#define W25Q_ENABLE_RESET				0x66	//sequence is 0x66 + 0x99 + 30us delay
 #define W25Q_RESET						0x99	//sequence is 0x66 + 0x99 + 30us delay
 #define W25Q_EXIT_QPI_MODE				0xFF
 
@@ -63,7 +63,9 @@ void W25Q_Reset(void);
 
 void W25Q_Chip_Erase(void);
 
+uint32_t W25Q_ManufacturerDeviceID(void);
 uint32_t W25Q_ReadID(void);
+uint32_t W25Q_UniqueID(void);
 
 void W25Q_Read(uint32_t startPage, uint8_t offset, uint32_t size, uint8_t *rData);
 

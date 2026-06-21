@@ -25,6 +25,7 @@
 #include "BoardLed.h"
 #include "ZRTC.h"
 #include "DataLogger.h"
+#include "W25Qxx.h"
 
 #include "usbd_cdc_if.h"
 
@@ -174,6 +175,11 @@ int main(void) {
 	// LogData_t LogData= {0};
 	int x = 0;
 	DataLogger_Init();
+
+	W25Q_Reset();
+	uint32_t manuf = W25Q_ManufacturerDeviceID();
+	uint32_t jedid = W25Q_ReadID();
+	uint32_t uniq = W25Q_UniqueID();
 
 	while (1) {
 		ledBlink(10);

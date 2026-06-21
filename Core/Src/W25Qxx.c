@@ -10,7 +10,9 @@
 #include "W25Qxx.h"
 
 extern SPI_HandleTypeDef hspi1;
-#define W25Q_SPI hspi1
+#define W25Q_SPI_PORT BOARD_SPI_FLASH
+#define W25Q_CS_PORT BOARD_SPI_FLASH_CS_GPIO_Port
+#define W25Q_CS_PIN BOARD_SPI_FLASH_CS_Pin
 
 #define numBLOCK 32  // number of total blocks for 16Mb flash, 32x16x16 pages and 32x16x16x256 Bytes
 
@@ -19,19 +21,19 @@ void W25Q_Delay(uint32_t time) {
 }
 
 void csLOW(void) {
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(W25Q_CS_PORT, W25Q_CS_PIN, GPIO_PIN_RESET);
 }
 
 void csHIGH(void) {
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(W25Q_CS_PORT, W25Q_CS_PIN, GPIO_PIN_SET);
 }
 
 void SPI_Write(uint8_t *data, uint8_t len) {
-	HAL_SPI_Transmit(&W25Q_SPI, data, len, 2000);
+	HAL_SPI_Transmit(&W25Q_SPI_PORT, data, len, 2000);
 }
 
 void SPI_Read(uint8_t *data, uint32_t len) {
-	HAL_SPI_Receive(&W25Q_SPI, data, len, 5000);
+	HAL_SPI_Receive(&W25Q_SPI_PORT, data, len, 5000);
 }
 
 
@@ -75,16 +77,27 @@ static uint32_t bytestomodify(uint32_t size, uint16_t offset) {
 
 void W25Q_Reset(void) {
 	uint8_t tData[2];
-	tData[0] = W25Q_ENABLE_RST; // enable Reset
+	tData[0] = W25Q_ENABLE_RESET; // enable Reset
 	tData[1] = W25Q_RESET; // Reset
 	csLOW();
 	SPI_Write(tData, 2);
 	csHIGH();
-	W25Q_Delay(100);
+	W25Q_Delay(100);	// time to settle down
+}
+
+uint32_t W25Q_ManufacturerDeviceID(void) {
+	uint8_t tData[4] = { 0 };
+	tData[0] = W25Q_MANUFACTURER_DEVICE_ID; // Read device ID
+	uint8_t rData[2];
+	csLOW();
+	SPI_Write(tData, 4);
+	SPI_Read(rData, 2);
+	csHIGH();
+	return rData[0];
 }
 
 uint32_t W25Q_ReadID(void) {
-	uint8_t tData = 0x9F; // Read JEDEC ID
+	uint8_t tData = W25Q_JEDEC_ID; // Read JEDEC ID
 	uint8_t rData[3];
 	csLOW();
 	SPI_Write(&tData, 1);
@@ -93,17 +106,24 @@ uint32_t W25Q_ReadID(void) {
 	return ((rData[0] << 16) | (rData[1] << 8) | rData[2]);
 }
 
-void W25Q_Chip_Erase(void) {
-	uint8_t tData = W25Q_CHIP_ERASE;
-
-	write_enable();
-
+uint32_t W25Q_UniqueID(void) {
+	uint8_t tData[5] = {0};
+	tData[0] = W25Q_UNIQUE_ID; // Read unique ID
+	uint8_t rData[8];
 	csLOW();
+	SPI_Write(tData, 5);
+	SPI_Read(rData, 8);
+	csHIGH();
+	return ((rData[0] << 16) | (rData[1] << 8) | rData[2]);
+}
+
+void W25Q_Chip_Erase(void) {
+	write_enable();
+	csLOW();
+	uint8_t tData = W25Q_CHIP_ERASE;
 	SPI_Write(&tData, 1);
 	csHIGH();
-
 	W25Q_Waitforwrite();
-
 	write_disable();
 }
 
