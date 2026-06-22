@@ -81,12 +81,12 @@ static void MX_SPI1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-volatile bool flegLogDumpInProgress = false;
+volatile bool flegLogDumpRequested = false;
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	GPIO_PinState prikit = HAL_GPIO_ReadPin(BOARD_KEY0_WKUP_GPIO_Port, BOARD_KEY0_WKUP_Pin);
 	if (prikit == GPIO_PIN_RESET) {
-		flegLogDumpInProgress = true;
+		flegLogDumpRequested = true;
 	}
 }
 
@@ -96,7 +96,7 @@ void dampujAkoJePrikit() {
 	if (hUsbDeviceFS.pClassData != NULL) {
 		hcdc = (USBD_CDC_HandleTypeDef *) hUsbDeviceFS.pClassData;
 	}
-	if (flegLogDumpInProgress == true) {
+	if (flegLogDumpRequested == true) {
 		char buf[100] = {0};
 		for (int i = 0; i < LogStatus.nextRamRecord; ++i) {
 			DataLogger_GetRecordString(buf, sizeof(buf), i);
@@ -127,7 +127,10 @@ void dampujAkoJePrikit() {
 				}
 			}
 		}
-		flegLogDumpInProgress = false;
+
+		CDC_Transmit_FS((uint8_t *)"\n\r", strlen("\n\r"));
+		HAL_Delay(200); // some time to finish
+		flegLogDumpRequested = false;
 	}
 }
 
@@ -223,27 +226,29 @@ int main(void) {
 
 		HAL_Delay(2000);
 
-		if (flegLogDumpInProgress == true) {
-			dampujAkoJePrikit();
-			// zatim cekaj ako treba flash erase
-			bool trigger_erase = false;
+		if (flegLogDumpRequested == true) {
+			char ponovo[] = "press again to dump the buffer once more\n\r";
+			char obrisi[] = "press and hold 5Sec to erase flash\n\r";
 			for ( ; ; ) {
-				ledBlink(20);		// rapid blink -> waiting for user input
-				HAL_Delay(20);
-				GPIO_PinState btnERASE_press = HAL_GPIO_ReadPin(BOARD_BOOT1_10k_pull_down_GPIO_Port, BOARD_BOOT1_10k_pull_down_Pin);
-				if (btnERASE_press == GPIO_PIN_SET) {
-					trigger_erase = true;
-					break;
+				ledBlink(50);		// rapid blink -> waiting for user input
+				HAL_Delay(50);
+				if (flegLogDumpRequested == true) {
+					dampujAkoJePrikit();
+					CDC_Transmit_FS((uint8_t *) ponovo, strlen(ponovo));
+					HAL_Delay(200);
+					CDC_Transmit_FS((uint8_t *) obrisi, strlen(obrisi));
+					HAL_Delay(100);
 				}
 			}
-			if (trigger_erase == true) {
-				W25Q_Reset();
-				W25Q_Chip_Erase();
-				DataLogger_Init();
-				ramBlockCnt = 0;
-				zRTC_Set_BKPreg(RAMBLOCK_CNT_bkpreg, ramBlockCnt);
-				trigger_erase = false;
-			}
+
+			// if (trigger_erase == true) {
+			// 	W25Q_Reset();
+			// 	W25Q_Chip_Erase();
+			// 	DataLogger_Init();
+			// 	ramBlockCnt = 0;
+			// 	zRTC_Set_BKPreg(RAMBLOCK_CNT_bkpreg, ramBlockCnt);
+			// 	trigger_erase = false;
+			// }
 		} else {
 			char bfr[100] = {0}; // Buffer to store the formatted text string
 			zRTC_GetTimeDateString(bfr, sizeof(bfr));
