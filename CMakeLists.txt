@@ -33,6 +33,9 @@ set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
 
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS ON)
 
 
 # Define the build type
@@ -51,16 +54,18 @@ project(${CMAKE_PROJECT_NAME})
 message("Build type: " ${CMAKE_BUILD_TYPE})
 
 # Enable CMake support for ASM and C languages
-enable_language(C ASM)
+enable_language(C CXX ASM)
 
 # Create an executable object type
 add_executable(${CMAKE_PROJECT_NAME}
         Core/Src/ZRTC.c
-        Core/Src/ZRTC.h
         Core/Src/DataLogger.c
-        Core/Src/DataLogger.h
         Core/Src/W25Qxx.c
-        Core/Src/W25Qxx.h
+        Core/Src/DLogger.cpp
+        Core/Src/ZRT.cpp
+        Core/Src/Led.cpp
+        Core/Src/UsbSerial.cpp
+        Core/Src/UsbSerial.hpp
 )
 
 # Add STM32CubeMX generated sources
