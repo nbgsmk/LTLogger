@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/LTLogger.iml" filepath="$PROJECT_DIR$/.idea/LTLogger.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/stm32_template_f411ceu.iml" filepath="$PROJECT_DIR$/.idea/stm32_template_f411ceu.iml" />
     </modules>
   </component>
 </project>

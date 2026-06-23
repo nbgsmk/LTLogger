@@ -24,12 +24,14 @@
 /* USER CODE BEGIN Includes */
 #include <ctype.h>
 
-#include "BoardLed.h"
-#include "ZRTC.h"
-#include "DataLogger.h"
+#include "Led.hpp"
+// #include "DataLogger.h"
+#include "DLogger.hpp"
 #include "W25Qxx.h"
 
 #include "usbd_cdc_if.h"
+#include "UsbSerial.hpp"
+#include "ZRT.hpp"
 
 /* USER CODE END Includes */
 
@@ -40,6 +42,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define MAX_RAM_BUFFER_KB 64
 #define RAMBLOCK_CNT_bkpreg    RTC_BKP_DR5
 
 /* USER CODE END PD */
@@ -60,6 +63,15 @@ UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 
+// Static RAM buffer for data logger, aligned to 4 bytes for Cortex-M4 (stm32f4)
+static uint8_t ramBuffer[1024 * MAX_RAM_BUFFER_KB] __attribute__((aligned(4)));
+Logging::DLogger dLogger(ramBuffer, MAX_RAM_BUFFER_KB);
+Led boardLed(BOARD_LED0_GPIO_Port, BOARD_LED0_Pin, LedPolarity::ActLO);
+// Led& get_board_led() {
+// 	// This constructor runs safely EXACTLY when this function is called for the first time
+// 	static Led boardLed(BOARD_LED0_GPIO_Port, BOARD_LED0_Pin, LedPolarity::ActLO);
+// 	return boardLed;
+// }
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -85,27 +97,34 @@ volatile bool flegLogDumpRequested = false;
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	GPIO_PinState prikit = HAL_GPIO_ReadPin(BOARD_KEY0_WKUP_GPIO_Port, BOARD_KEY0_WKUP_Pin);
-	if (prikit == GPIO_PIN_RESET) {
+	if (prikit == BOARD_KEY0_polarity) {
 		flegLogDumpRequested = true;
 	}
 }
 
 void dampujAkoJePrikit() {
 	extern USBD_HandleTypeDef hUsbDeviceFS;
-	USBD_CDC_HandleTypeDef *hcdc = NULL;
-	if (hUsbDeviceFS.pClassData != NULL) {
+	USBD_CDC_HandleTypeDef *hcdc = nullptr;
+	if (hUsbDeviceFS.pClassData != nullptr) {
 		hcdc = (USBD_CDC_HandleTypeDef *) hUsbDeviceFS.pClassData;
 	}
 	if (flegLogDumpRequested == true) {
-		char buf[100] = {0};
-		for (int i = 0; i < LogStatus.nextRamRecord; ++i) {
-			DataLogger_GetRecordString(buf, sizeof(buf), i);
 
+		char buff[200] = {0};
+		std::string linija;
+		CDC_Transmit_FS((uint8_t *)"\n\r", strlen("\n\r"));		//
+		for (uint32_t i = 0; i < dLogger.getNextPos(); ++i) {
+
+			linija = dLogger.getRecordStr(i);
+			if (linija.empty()) {
+				break;
+			}
+			snprintf(buff, 200, "%s", linija.c_str());
 			uint32_t abortDelay = 2000;
-			uint8_t status = USBD_BUSY;
+			uint8_t usbStat = USBD_BUSY;
 			while (abortDelay > 0) {
-				status = CDC_Transmit_FS((uint8_t *) buf, strlen(buf));
-				if (USBD_BUSY == status) {
+				usbStat = CDC_Transmit_FS((uint8_t *) buff, strlen(buff));
+				if (USBD_BUSY == usbStat) {
 					abortDelay--;
 					HAL_Delay(2); // sacekaj da USBD bude spreman
 				} else {
@@ -117,7 +136,7 @@ void dampujAkoJePrikit() {
 			// CRITICAL SAFETY NET: If the request was successful, wait for the
 			// physical USB hardware to finish broadcasting the bytes over the wire
 			// BEFORE allowing the for-loop to run again and overwrite "buf".
-			if (status == USBD_OK && hcdc != NULL) {
+			if (usbStat == USBD_OK && hcdc != nullptr) {
 				uint32_t txSafetyTimeout = 2000;
 				while (hcdc->TxState != 0) {
 					HAL_Delay(1); // wait for physical USB hardware to finish broadcasting
@@ -126,8 +145,10 @@ void dampujAkoJePrikit() {
 					}
 				}
 			}
+
 		}
 
+		// novi red na kraju celog dumpa
 		CDC_Transmit_FS((uint8_t *)"\n\r", strlen("\n\r"));
 		HAL_Delay(200); // some time to finish
 		flegLogDumpRequested = false;
@@ -142,6 +163,13 @@ void dampujAkoJePrikit() {
   */
 int main(void) {
 	/* USER CODE BEGIN 1 */
+	extern void (*__init_array_start []) (void) __attribute__((weak));
+	extern void (*__init_array_end []) (void) __attribute__((weak));
+
+	int count = __init_array_end - __init_array_start;
+	for (int i = 0; i < count; i++) {
+		__init_array_start[i]();
+	}
 
 	/* USER CODE END 1 */
 
@@ -159,9 +187,6 @@ int main(void) {
 
 	/* USER CODE BEGIN SysInit */
 
-	ledBlink(20);
-	ledBlink(20);
-
 	/* USER CODE END SysInit */
 
 	/* Initialize all configured peripherals */
@@ -178,66 +203,74 @@ int main(void) {
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
 
-	int x = 0;
-	DataLogger_Init();
+	boardLed.blink(50, 50);
+	boardLed.blink(50, 50);
 
-	W25Q_Reset();
-	uint32_t manuf = W25Q_ManufacturerDeviceID();
-	uint32_t jedid = W25Q_ReadID();
-	uint32_t uniq = W25Q_UniqueID();
+	// W25Q_Reset();
+	// uint32_t manuf = W25Q_ManufacturerDeviceID();
+	// uint32_t jedid = W25Q_ReadID();
+	// uint32_t uniq = W25Q_UniqueID();
 
 	constexpr uint32_t flashPagesPerRamBlock = ( (1024*MAX_RAM_BUFFER_KB) / W25Q_WRITE_PAGE_SIZE );
 	constexpr uint32_t ramBlocksPerW25Qflash = ( W25Q_FLASH_SIZE / (1024*MAX_RAM_BUFFER_KB) );
-	uint32_t ramBlockCnt = 	zRTC_Get_BKPreg(RAMBLOCK_CNT_bkpreg);
-	if (ramBlockCnt >= ramBlocksPerW25Qflash) {
-		ramBlockCnt = 0;
-		zRTC_Set_BKPreg(RAMBLOCK_CNT_bkpreg, 0);
+
+	uint32_t currentRamBlk = 	ZRT::GetBKPreg(RAMBLOCK_CNT_bkpreg);
+	if (currentRamBlk >= ramBlocksPerW25Qflash) {
+		currentRamBlk = 0;
+		ZRT::SetBKPreg(RAMBLOCK_CNT_bkpreg, 0);
 	}
 
 	uint16_t fakeSensors[3] = {0};
 	uint16_t idxx = 0;
 	while (1) {
-		ledBlink(10);
+		boardLed.blink(10);
 
 		RTC_TimeTypeDef sT = {0};
 		RTC_DateTypeDef sD = {0};
-		zRTC_GetTimeDate(&sT, &sD);
+		ZRT::GetTimeDate(&sT, &sD);
 
 		fakeSensors[0] = idxx++;
 		fakeSensors[1] = idxx++;
 		fakeSensors[2] = idxx++;
-		RamBuffer_Append(&sT, &sD, fakeSensors, sizeof(fakeSensors));
+		Logging::SingleLogRecord_t logr;
+		logr.rtcYear = sD.Year;
+		logr.rtcMonth = sD.Month;
+		logr.rtcDate = sD.Date;
+		logr.rtcHour = sT.Hours;
+		logr.rtcMinute = sT.Minutes;
+		logr.rtcSecond = sT.Minutes;
+		logr.rtcWeekday = sD.WeekDay;
+		logr.sensors[0] = fakeSensors[0];
+		logr.sensors[1] = fakeSensors[1];
+		logr.sensors[2] = fakeSensors[2];
+		dLogger.append(logr);
 
-		if (true == LogStatus.ramFull) {
-			// RAM bafer popunjen, prepisi ga u flash
-			uint32_t flashRawPage = ramBlockCnt * flashPagesPerRamBlock;
-			W25Q_Write_AppendOnly(flashRawPage, 0, sizeof(LogData),  (uint8_t*)&LogData);
-			ramBlockCnt++;
-			zRTC_Set_BKPreg(RAMBLOCK_CNT_bkpreg, ramBlockCnt);
-			LogStatus.ramFull = false;
-			LogStatus.nextRamRecord = 0;
+
+		if (dLogger.isFull()) {
+			uint32_t flashPageAddr = currentRamBlk * flashPagesPerRamBlock;
+			// W25Q_Write_AppendOnly(flashPageAddr, 0, sizeof(ramBuffer),  (uint8_t*)&ramBuffer);
+			currentRamBlk++;
+			ZRT::SetBKPreg(RAMBLOCK_CNT_bkpreg, currentRamBlk);
+			dLogger.flush();
+		}
+		if (currentRamBlk >= ramBlocksPerW25Qflash) {
+			currentRamBlk = 0;
+			ZRT::SetBKPreg(RAMBLOCK_CNT_bkpreg, currentRamBlk);
+			dLogger.reset();
 		}
 
-		if (ramBlockCnt >= ramBlocksPerW25Qflash) {
-			ramBlockCnt = 0;
-			zRTC_Set_BKPreg(RAMBLOCK_CNT_bkpreg, ramBlockCnt);
-			DataLogger_Init();
-		}
 
 		HAL_Delay(2000);
 
 		if (flegLogDumpRequested == true) {
-			char ponovo[] = "press again to dump the buffer once more\n\r";
-			char obrisi[] = "press and hold 5Sec to erase flash\n\r";
+			char ponovo[] = "press again to dump the buffer once more";
+			char obrisi[] = "press and hold 5 seconds to erase flash";
 			for ( ; ; ) {
-				ledBlink(50);		// rapid blink -> waiting for user input
-				HAL_Delay(50);
+				boardLed.blink(50, 50);		// rapid blink -> waiting for user input
 				if (flegLogDumpRequested == true) {
 					dampujAkoJePrikit();
-					CDC_Transmit_FS((uint8_t *) ponovo, strlen(ponovo));
-					HAL_Delay(200);
-					CDC_Transmit_FS((uint8_t *) obrisi, strlen(obrisi));
-					HAL_Delay(100);
+					UsbSerial::transmitLine(ponovo);
+					UsbSerial::transmitLine(obrisi);
 				}
 			}
 
@@ -251,8 +284,9 @@ int main(void) {
 			// }
 		} else {
 			char bfr[100] = {0}; // Buffer to store the formatted text string
-			zRTC_GetTimeDateString(bfr, sizeof(bfr));
-			CDC_Transmit_FS((uint8_t *) bfr, strlen(bfr));
+			ZRT::GetTimeDateString(bfr, sizeof(bfr));
+			std::string x = std::to_string(dLogger.getNextPos());
+			UsbSerial::transmit(std::string(bfr) + " " + x + "\n\r");
 		}
 
 
